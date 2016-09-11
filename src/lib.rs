@@ -45,7 +45,7 @@ struct ApiResponseWrapper {
 pub struct ApiResponse {
     pub id: u64,
     pub joke: String,
-    pub categories: Box<[String]>
+    pub categories: Box<[String]>,
 }
 
 /// Returns an option value containing a random joke from the API
@@ -58,7 +58,10 @@ pub fn next() -> Option<ApiResponse> {
 /// using the names supplied to the function instead of the default
 /// name (Chuck Norris) or, failing that, None.
 pub fn next_with_names(first: &str, last: &str) -> Option<ApiResponse> {
-    unwrap_response(execute_request(&format!("http://api.icndb.com/jokes/random?firstName={}&lastName={}", first, last)))
+    unwrap_response(execute_request(&format!("http://api.icndb.\
+                                              com/jokes/random?firstName={}&lastName={}",
+                                             first,
+                                             last)))
 }
 
 /// Returns an option value containing a specified joke from the API
@@ -71,13 +74,11 @@ pub fn get_by_id(id: u64) -> Option<ApiResponse> {
 /// using the names supplied to the function instead of the default
 /// name (Chuck Norris) or, failing that, None.
 pub fn get_by_id_with_names(id: u64, first: &str, last: &str) -> Option<ApiResponse> {
-    unwrap_response(
-        execute_request(
-            &format!(
-                "http://api.icndb.com/jokes/{}?firstName={}&lastName={}",
-                id,
-                first,
-                last)))
+    unwrap_response(execute_request(&format!("http://api.icndb.\
+                                              com/jokes/{}?firstName={}&lastName={}",
+                                             id,
+                                             first,
+                                             last)))
 }
 
 /// Parses the response returned by a query against the ICNDB API
@@ -90,7 +91,7 @@ fn unwrap_response(response: Option<String>) -> Option<ApiResponse> {
 
     match json::decode::<ApiResponseWrapper>(&raw_response) {
         Ok(result) => unescape_content(result.value),
-        _ => None
+        _ => None,
     }
 }
 
@@ -113,7 +114,7 @@ fn unescape_content(response: ApiResponse) -> Option<ApiResponse> {
         Some(ApiResponse {
             id: response.id,
             joke: response.joke.replace("&quot;", "\""),
-            categories: response.categories
+            categories: response.categories,
         })
     } else {
         Some(response)
@@ -123,9 +124,12 @@ fn unescape_content(response: ApiResponse) -> Option<ApiResponse> {
 /// Executes an arbitrary request against the ICNDB API.
 fn execute_request(request: &str) -> Option<String> {
     let client = Client::new();
-    client.get(request).send().map(|mut res| {
-        let mut buf = String::new();
-        res.read_to_string(&mut buf).ok();
-        buf
-    }).ok()
+    client.get(request)
+        .send()
+        .map(|mut res| {
+            let mut buf = String::new();
+            res.read_to_string(&mut buf).ok();
+            buf
+        })
+        .ok()
 }
