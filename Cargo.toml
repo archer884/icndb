@@ -8,5 +8,5 @@ hyper = "*"
 rustc-serialize = "*"
 
 [features]
-default = []
+default = ["ssl"]
 ssl = ["hyper/ssl"]
