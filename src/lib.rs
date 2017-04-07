@@ -20,6 +20,9 @@
 //! The big thing to keep in mind, here, is that Maximus Hardcorion is
 //! Chuck Norris' Latin name.
 
+#[cfg(feature = "ssl")]
+extern crate hyper_native_tls;
+
 extern crate hyper;
 extern crate rustc_serialize;
 
@@ -27,17 +30,19 @@ use hyper::Client;
 use rustc_serialize::json;
 use std::io::Read;
 
-/// Wraps an API response from the `api.icndb.com`. The authors'
-/// intent appears to have been to provide an interface for both
-/// failed and successful requests, but it has been difficult to
-/// represent the full wrapper in Rust, and the wrapper adds no
-/// real value.
+// Wraps an API response from the `api.icndb.com`. The authors'
+// intent appears to have been to provide an interface for both
+// failed and successful requests, but it has been difficult to
+// represent the full wrapper in Rust, and the wrapper adds no
+// real value.
 #[derive(RustcDecodable, RustcEncodable)]
 struct ApiResponseWrapper {
     // type: String, // terrible field name
     value: ApiResponse,
 }
 
+/// Response containing a Chuck Norris joke.
+///
 /// Represents a single joke provided by the ICNDB. The `id` field
 /// uniquely identifies this specific joke, which allows the user
 /// to get this joke again at a later time if he or she so desires.
@@ -48,41 +53,49 @@ pub struct ApiResponse {
     pub categories: Box<[String]>,
 }
 
+/// Get a random joke from the ICNDB.
+///
 /// Returns an option value containing a random joke from the API
 /// or, failing that, None.
 pub fn next() -> Option<ApiResponse> {
-    unwrap_response(execute_request("http://api.icndb.com/jokes/random"))
+    unwrap_response(execute_request("://api.icndb.com/jokes/random"))
 }
 
+/// Get a random joke from the ICNDB, replacing the names in the joke.
+///
 /// Returns an option value containing a random joke from the API
 /// using the names supplied to the function instead of the default
 /// name (Chuck Norris) or, failing that, None.
 pub fn next_with_names(first: &str, last: &str) -> Option<ApiResponse> {
-    unwrap_response(execute_request(&format!("http://api.icndb.\
+    unwrap_response(execute_request(&format!("://api.icndb.\
                                               com/jokes/random?firstName={}&lastName={}",
                                              first,
                                              last)))
 }
 
+/// Get a specific joke from the ICNDB.
+///
 /// Returns an option value containing a specified joke from the API
 /// or, failing that, None.
 pub fn get_by_id(id: u64) -> Option<ApiResponse> {
-    unwrap_response(execute_request(&format!("http://api.icndb.com/jokes/{}", id)))
+    unwrap_response(execute_request(&format!("://api.icndb.com/jokes/{}", id)))
 }
 
+/// Get a specific joke with specified names.
+///
 /// Returns an option value containing a specified joke from the API
 /// using the names supplied to the function instead of the default
 /// name (Chuck Norris) or, failing that, None.
 pub fn get_by_id_with_names(id: u64, first: &str, last: &str) -> Option<ApiResponse> {
-    unwrap_response(execute_request(&format!("http://api.icndb.\
+    unwrap_response(execute_request(&format!("://api.icndb.\
                                               com/jokes/{}?firstName={}&lastName={}",
                                              id,
                                              first,
                                              last)))
 }
 
-/// Parses the response returned by a query against the ICNDB API
-/// into an ApiResponse or, failing that, None.
+// Parses the response returned by a query against the ICNDB API
+// into an ApiResponse or, failing that, None.
 fn unwrap_response(response: Option<String>) -> Option<ApiResponse> {
     let raw_response = match response {
         Some(response) => response,
@@ -95,20 +108,20 @@ fn unwrap_response(response: Option<String>) -> Option<ApiResponse> {
     }
 }
 
-/// Unescape HTML entities found in joke contents.
-///
-/// The ICNDB represents some values as HTML entities in the json
-/// packets returned to the caller and rustc_deserialize does not
-/// unescape these entities upon deserializing the json packet.
-/// This function deals with that by taking the (potentially) escaped
-/// values and unescaping any HTML entities contained therein before
-/// returning a new ApiResponse struct containing the unescaped
-/// values.
-///
-/// ** Entities handled include: **
-/// - &quot;
-///
-/// Hopefully we won't discover anymore.
+// Unescape HTML entities found in joke contents.
+//
+// The ICNDB represents some values as HTML entities in the json
+// packets returned to the caller and rustc_deserialize does not
+// unescape these entities upon deserializing the json packet.
+// This function deals with that by taking the (potentially) escaped
+// values and unescaping any HTML entities contained therein before
+// returning a new ApiResponse struct containing the unescaped
+// values.
+//
+// ** Entities handled include: **
+// - &quot;
+//
+// Hopefully we won't discover anymore.
 fn unescape_content(response: ApiResponse) -> Option<ApiResponse> {
     if response.joke.contains("&quot;") {
         Some(ApiResponse {
@@ -121,10 +134,29 @@ fn unescape_content(response: ApiResponse) -> Option<ApiResponse> {
     }
 }
 
-/// Executes an arbitrary request against the ICNDB API.
+#[cfg(not(feature = "ssl"))]
 fn execute_request(request: &str) -> Option<String> {
     let client = Client::new();
-    client.get(request)
+    client.get(&format!("http{}", request))
+        .send()
+        .map(|mut res| {
+            let mut buf = String::new();
+            res.read_to_string(&mut buf).ok();
+            buf
+        })
+        .ok()
+}
+
+#[cfg(feature = "ssl")]
+fn execute_request(request: &str) -> Option<String> {
+    use hyper::net::HttpsConnector;
+    use hyper_native_tls::NativeTlsClient;
+
+    let ssl = NativeTlsClient::new().unwrap();
+    let connector = HttpsConnector::new(ssl);
+    let client = Client::with_connector(connector);
+
+    client.get(&format!("https{}", request))
         .send()
         .map(|mut res| {
             let mut buf = String::new();

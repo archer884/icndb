@@ -4,9 +4,10 @@ version = "0.1.0"
 authors = ["J/A <archer884@gmail.com>"]
 
 [dependencies]
-hyper = {version = "*", default-features = false}
+hyper = { version = "*", default-features = false }
 rustc-serialize = "*"
+hyper-native-tls = { version = "*", optional = true }
 
 [features]
 default = ["ssl"]
-ssl = ["hyper/ssl"]
+ssl = ["hyper-native-tls"]
