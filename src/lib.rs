@@ -46,7 +46,7 @@ struct ApiResponseWrapper {
 /// Represents a single joke provided by the ICNDB. The `id` field
 /// uniquely identifies this specific joke, which allows the user
 /// to get this joke again at a later time if he or she so desires.
-#[derive(RustcDecodable, RustcEncodable)]
+#[derive(Debug, RustcDecodable, RustcEncodable)]
 pub struct ApiResponse {
     pub id: u64,
     pub joke: String,
@@ -164,4 +164,13 @@ fn execute_request(request: &str) -> Option<String> {
             buf
         })
         .ok()
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn it_works() {
+        let result = super::next();
+        assert!(result.is_some());
+    }
 }
