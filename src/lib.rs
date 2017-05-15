@@ -14,7 +14,7 @@
 //!
 //! let response = icndb::next_with_names("Maximus", "Hardcorion").unwrap();
 //!
-//! assert!(response.joke.contains("Maximus Hardcorion"));
+//! assert!(response.content.contains("Maximus Hardcorion"));
 //! ```
 //!
 //! The big thing to keep in mind, here, is that Maximus Hardcorion is
@@ -37,10 +37,16 @@ use std::io::Read;
 // failed and successful requests, but it has been difficult to
 // represent the full wrapper in Rust, and the wrapper adds no
 // real value.
-#[derive(Serialize, Deserialize)]
+#[derive(Deserialize)]
 struct ApiResponseWrapper {
-    // type: String, // terrible field name
     value: ApiResponse,
+}
+
+#[derive(Deserialize)]
+struct ApiResponse {
+    pub id: u64,
+    pub joke: String,
+    pub categories: Box<[String]>,
 }
 
 /// Response containing a Chuck Norris joke.
@@ -48,18 +54,29 @@ struct ApiResponseWrapper {
 /// Represents a single joke provided by the ICNDB. The `id` field
 /// uniquely identifies this specific joke, which allows the user
 /// to get this joke again at a later time if he or she so desires.
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ApiResponse {
+#[derive(Debug)]
+pub struct Joke {
     pub id: u64,
-    pub joke: String,
+    pub content: String,
     pub categories: Box<[String]>,
+}
+
+impl From<ApiResponse> for Joke {
+    #[inline]
+    fn from(response: ApiResponse) -> Self {
+        Joke {
+            id: response.id,
+            content: response.joke,
+            categories: response.categories,
+        }
+    }
 }
 
 /// Get a random joke from the ICNDB.
 ///
 /// Returns an option value containing a random joke from the API
 /// or, failing that, None.
-pub fn next() -> Option<ApiResponse> {
+pub fn next() -> Option<Joke> {
     unwrap_response(execute_request("://api.icndb.com/jokes/random"))
 }
 
@@ -68,18 +85,16 @@ pub fn next() -> Option<ApiResponse> {
 /// Returns an option value containing a random joke from the API
 /// using the names supplied to the function instead of the default
 /// name (Chuck Norris) or, failing that, None.
-pub fn next_with_names(first: &str, last: &str) -> Option<ApiResponse> {
-    unwrap_response(execute_request(&format!("://api.icndb.\
-                                              com/jokes/random?firstName={}&lastName={}",
-                                             first,
-                                             last)))
+pub fn next_with_names(first: &str, last: &str) -> Option<Joke> {
+    let request_url = format!("://api.icndb.com/jokes/random?firstName={}&lastName={}", first, last);
+    unwrap_response(execute_request(&request_url))
 }
 
 /// Get a specific joke from the ICNDB.
 ///
 /// Returns an option value containing a specified joke from the API
 /// or, failing that, None.
-pub fn get_by_id(id: u64) -> Option<ApiResponse> {
+pub fn get_by_id(id: u64) -> Option<Joke> {
     unwrap_response(execute_request(&format!("://api.icndb.com/jokes/{}", id)))
 }
 
@@ -88,24 +103,21 @@ pub fn get_by_id(id: u64) -> Option<ApiResponse> {
 /// Returns an option value containing a specified joke from the API
 /// using the names supplied to the function instead of the default
 /// name (Chuck Norris) or, failing that, None.
-pub fn get_by_id_with_names(id: u64, first: &str, last: &str) -> Option<ApiResponse> {
-    unwrap_response(execute_request(&format!("://api.icndb.\
-                                              com/jokes/{}?firstName={}&lastName={}",
-                                             id,
-                                             first,
-                                             last)))
+pub fn get_by_id_with_names(id: u64, first: &str, last: &str) -> Option<Joke> {
+    let request_url = format!("://api.icndb.com/jokes/{}?firstName={}&lastName={}", id, first, last);
+    unwrap_response(execute_request(&request_url))
 }
 
 // Parses the response returned by a query against the ICNDB API
-// into an ApiResponse or, failing that, None.
-fn unwrap_response(response: Option<String>) -> Option<ApiResponse> {
+// into an Joke or, failing that, None.
+fn unwrap_response(response: Option<String>) -> Option<Joke> {
     let raw_response = match response {
         Some(response) => response,
         None => return None,
     };
 
     serde_json::from_str::<ApiResponseWrapper>(&raw_response).ok()
-        .and_then(|result| unescape_content(result.value))
+        .and_then(|result| unescape_content(result.value.into()))
 }
 
 // Unescape HTML entities found in joke contents.
@@ -115,18 +127,18 @@ fn unwrap_response(response: Option<String>) -> Option<ApiResponse> {
 // unescape these entities upon deserializing the json packet.
 // This function deals with that by taking the (potentially) escaped
 // values and unescaping any HTML entities contained therein before
-// returning a new ApiResponse struct containing the unescaped
+// returning a new Joke struct containing the unescaped
 // values.
 //
 // ** Entities handled include: **
 // - &quot;
 //
 // Hopefully we won't discover anymore.
-fn unescape_content(response: ApiResponse) -> Option<ApiResponse> {
-    if response.joke.contains("&quot;") {
-        Some(ApiResponse {
+fn unescape_content(response: Joke) -> Option<Joke> {
+    if response.content.contains("&quot;") {
+        Some(Joke {
             id: response.id,
-            joke: response.joke.replace("&quot;", "\""),
+            content: response.content.replace("&quot;", "\""),
             categories: response.categories,
         })
     } else {
@@ -171,6 +183,6 @@ mod tests {
     #[test]
     fn it_works() {
         let result = super::next();
-        assert!(result.is_some());
+        assert!(result.is_some(), format!("{:?}", result));
     }
 }
