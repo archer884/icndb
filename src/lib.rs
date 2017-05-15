@@ -23,11 +23,13 @@
 #[cfg(feature = "ssl")]
 extern crate hyper_native_tls;
 
+#[macro_use]
+extern crate serde_derive;
+
 extern crate hyper;
-extern crate rustc_serialize;
+extern crate serde_json;
 
 use hyper::Client;
-use rustc_serialize::json;
 use std::io::Read;
 
 // Wraps an API response from the `api.icndb.com`. The authors'
@@ -35,7 +37,7 @@ use std::io::Read;
 // failed and successful requests, but it has been difficult to
 // represent the full wrapper in Rust, and the wrapper adds no
 // real value.
-#[derive(RustcDecodable, RustcEncodable)]
+#[derive(Serialize, Deserialize)]
 struct ApiResponseWrapper {
     // type: String, // terrible field name
     value: ApiResponse,
@@ -46,7 +48,7 @@ struct ApiResponseWrapper {
 /// Represents a single joke provided by the ICNDB. The `id` field
 /// uniquely identifies this specific joke, which allows the user
 /// to get this joke again at a later time if he or she so desires.
-#[derive(Debug, RustcDecodable, RustcEncodable)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ApiResponse {
     pub id: u64,
     pub joke: String,
@@ -102,10 +104,8 @@ fn unwrap_response(response: Option<String>) -> Option<ApiResponse> {
         None => return None,
     };
 
-    match json::decode::<ApiResponseWrapper>(&raw_response) {
-        Ok(result) => unescape_content(result.value),
-        _ => None,
-    }
+    serde_json::from_str::<ApiResponseWrapper>(&raw_response).ok()
+        .and_then(|result| unescape_content(result.value))
 }
 
 // Unescape HTML entities found in joke contents.

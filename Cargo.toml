@@ -4,9 +4,11 @@ version = "0.2.0"
 authors = ["J/A <archer884@gmail.com>"]
 
 [dependencies]
-hyper = { version = "*", default-features = false }
-rustc-serialize = "*"
+hyper = "*"
 hyper-native-tls = { version = "*", optional = true }
+serde = "*"
+serde_derive = "*"
+serde_json = "*"
 
 [features]
 default = ["ssl"]
