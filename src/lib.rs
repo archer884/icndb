@@ -1,15 +1,11 @@
-//! `icndb` provides a simple interface to `api.icndb.com` and is
-//! designed especially for use with `fun`. Extracting this functionality
-//! into a library grants us greater flexibility with regard to our
-//! base application and will permit a large number of improvements
-//! in the future.
+//! `icndb` provides a simple interface to the [Internet Chuck Norris Database](http://www.icndb.com)
 //!
 //! ## Example
 //!
 //! The code below calls the API to get a random joke with the custom
 //! name "Maximus Hardcorion", because why would you not?
 //!
-//! ```
+//! ```rust
 //! extern crate icndb;
 //!
 //! let response = icndb::next_with_names("Maximus", "Hardcorion").unwrap();
