@@ -1,10 +1,11 @@
 extern crate icndb;
 
 fn main() {
-    let identifiers = std::env::args().skip(1).filter_map(|n| n.parse::<u64>().ok());
     let client = icndb::ApiClient::new();
+    let joke = client.get_by_id(23);
 
-    for id in identifiers {
-        println!("{:?}", client.get_by_id(id));
+    if let Some(joke) = joke.ok() {
+        // Time waits for no man. Unless that man is Chuck Norris.
+        println!("{}", joke.content);
     }
 }
