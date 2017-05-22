@@ -43,6 +43,7 @@ pub struct ApiClient {
 }
 
 impl ApiClient {
+    /// Create a new API client.
     pub fn new() -> ApiClient {
         ApiClient { client: create_client() }
     }
