@@ -8,7 +8,8 @@
 //! ```rust
 //! extern crate icndb;
 //!
-//! let response = icndb::next_with_names("Maximus", "Hardcorion").unwrap();
+//! let client = icndb::ApiClient::new();
+//! let response = client.next_with_names("Maximus", "Hardcorion").unwrap();
 //!
 //! assert!(response.content.contains("Maximus Hardcorion"));
 //! ```
@@ -197,9 +198,12 @@ fn read_response(response: result::Result<client::Response, hyper::Error>) -> Re
 
 #[cfg(test)]
 mod tests {
+    use ApiClient;
+
     #[test]
     fn it_works() {
-        let result = super::next();
+        let client = ApiClient::new();
+        let result = client.next();
         assert!(result.is_ok(), format!("{:?}", result));
     }
 }
