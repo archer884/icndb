@@ -170,7 +170,7 @@ fn unescape_content(response: ApiResponse) -> Joke {
 
 #[cfg(not(feature="ssl"))]
 fn create_client() -> hyper::Client {
-    Client::new()
+    hyper::Client::new()
 }
 
 #[cfg(feature="ssl")]
